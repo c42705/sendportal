@@ -1,0 +1,63 @@
+version: '3'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sendportal-app
+    container_name: sendportal-app
+    restart: unless-stopped
+    volumes:
+      - ./:/var/www
+      - ./php/local.ini:/usr/local/etc/php/conf.d/local.ini
+    networks:
+      - sendportal-network
+    depends_on:
+      - db
+      - redis
+
+  webserver:
+    image: nginx:alpine
+    container_name: sendportal-webserver
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www
+      - ./nginx/conf.d/:/etc/nginx/conf.d/
+    networks:
+      - sendportal-network
+    depends_on:
+      - app
+
+  db:
+    image: mysql:5.7
+    container_name: sendportal-db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_DATABASE}
+      MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
+      MYSQL_PASSWORD: ${DB_PASSWORD}
+      MYSQL_USER: ${DB_USERNAME}
+      SERVICE_TAGS: dev
+      SERVICE_NAME: mysql
+    volumes:
+      - sendportal-data:/var/lib/mysql
+    networks:
+      - sendportal-network
+
+  redis:
+    image: redis:alpine
+    container_name: sendportal-redis
+    restart: unless-stopped
+    networks:
+      - sendportal-network
+
+networks:
+  sendportal-network:
+    driver: bridge
+
+volumes:
+  sendportal-data:
+    driver: local
